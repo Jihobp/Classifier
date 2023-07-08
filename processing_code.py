@@ -11,6 +11,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from lightgbm import LGBMClassifier
 
+#Man's notion >> 머신러닝 관련 정리내용 !!!!! 참고. 
 # 정확도 기준으로 classifier 모델 추천하는 알고리즘 생성
 # 어떤 사출 조건이 제품의 불량 유무에 큰 영향을 주는지 
 
@@ -44,15 +45,22 @@ def split_data(data) : # : 2차원 배열(행은 데이터가 있는데 기압, 
     # test 데이터는 0.3
     # x가 변수 y 가 결과값. x가 사출조건이면 y는 제품불량 유무.
     # fit :  학습 시키는 것. 모델에 맞춰보는 것.  = x_train & y_train 
+    # (머신러닝) 좌표값이 있을경우 특정 좌표값을 점찍어서 있다면 "사람이다"로 있는걸로 인식. 특정패턴의 정확한 기준으로 뭐다 아니다 정의를 내리는 것.
+    # (딥러닝) 답이 없다. 대신 패턴이 있는 것. 사람이라고 군집화(cluster)로 묶는다. 강아지, 고양이 등 비슷한 패턴으로 묶인 것. 정답이 아닐 확률이 높다. 패턴을 찾는 딥러닝이 그래서 어려운것.
+    # 딥러닝은 군집화. 군집화 속의 패턴이 있고 그걸 찾는 것.
+    # 머신러닝 define ? 딥러닝은 classify. 머신러닝과 딥러닝의 차이는 사람의 개입 유무.
+    # 머신러닝은 인간이 결과를 주는 것. 데이터를 분석 및 축적. 패턴 추출 작업 유.
+    # 딥러닝은 인간이 개입하지 않고 컴퓨터가 스스로 정답을 추론하도록 유도. 패턴 추출 작업 무.
+    # 분류 : 종류 예측(어뷰징 검출)  /// 회귀 : 연속된 값을 예측. >>> 둘다 머신러닝과 딥러닝에 속함. 
 
 
 # 3. 분류 모델 명시 및 학습하기
 def train_model(x_train, x_test, y_train, y_test) :
     # 3-1. RandomForest_Classifier
     rf_clf = RandomForestClassifier(random_state=0) #random_state : 컴퓨터는 단순하다. 단순한 12345만 학습시키면 그것만 학습하고 찾음. 다양한 난수패턴을 학습시켜야한다. 
-    rf_clf.fit(x_train, y_train)
+    rf_clf.fit(x_train, y_train) #fit : 패턴을 학습하세요 :D
     
-    # 3-2. DecisionTree Classifier
+    # 3-2. DecisionTree Classifier 결정트리 #man's notion 참고
     dt_clf = DecisionTreeClassifier(random_state=156)
     dt_clf.fit(x_train, y_train)
     
@@ -60,27 +68,33 @@ def train_model(x_train, x_test, y_train, y_test) :
     lgbm_clf = LGBMClassifier(n_estimators=200, learning_rate=0.06)
     lgbm_clf.fit(x_train, y_train)
 
-    # 3-4. XGBClassifier
+    # 3-4. XGBClassifier 
     xgb_clf = xgboost.XGBClassifier(n_estimators=200, learning_rate = 0.06, gamma=0, subsaple=0.75, colsample_bytree=1, max_depth=7)
     xgb_clf.fit(x_train, y_train, early_stopping_rounds = 100, eval_metric = "logloss", eval_set = [ (x_test, y_test) ], verbose=True)
+    # 학습할때의 최적조건을 적어 놓은 것. 목적 : 정확도 향상 
+    # 최적의 조건을 찾는 공식?????????????????? 
+    # hyper parameter를 튜닝함. grid search를 통해서. 그 방식이 명시되어 있는 것. 일일히 환경값을 주면서 성능을 일일히하며 hyper parameter 값을 알려줌.
+    # grid search 가 문제가 되지만 그래도 쓴다. 1,2,3,4 너무 세세해서 시간이 오래 걸림.
+    # 대체로 베이지안 최적화. >> 책에 있지만 실제론 x
+    
+    return rf_clf, dt_clf, lgbm_clf, xgb_clf #해당 모델의 데이터를 입력해서 학습시킨 것. 즉, fit 한 것 ㅇㅅㅇ/ 
 
-    return rf_clf, dt_clf, lgbm_clf, xgb_clf
 
-# 4. 예측하기
+# 4. 예측하기 = 분류(정답을 이미 줌) 이런 조건이면 불량이다 판단 유.
 def prediction(rf_clf, dt_clf, lgbm_clf, xgb_clf, x_test, col):
     # 4-1. RandomForest Classifier
-    rf_pred = rf_clf.predict(x_test)
+    rf_pred = rf_clf.predict(x_test) #예측한 값
 
     # 4-2. DecisionTree Classifier
-    dt_pred = dt_clf.predict(x_test)
+    dt_pred = dt_clf.predict(x_test) 
     
     # 4-3. LGBMClassifier
     lgbm_pred = lgbm_clf.predict(x_test)
 
-    # 4-4. XGBClassifier
+    # 4-4. XGBClassifier 
     xgb_pred = xgb_clf.predict(x_test)
-    xgb_pred = pd.DataFrame(xgb_pred, columns=[col[-1]])
-    xgb_pred = xgb_pred.set_index(x_test.index.values)
+    xgb_pred = pd.DataFrame(xgb_pred, columns=[col[-1]]) # 예측한것의 컬럼명. 제일 끝의 배열
+    xgb_pred = xgb_pred.set_index(x_test.index.values) # index 만들어 준것. xgb_classifier의 특성 그냥 루틴화된것. 어떤걸 순서대로 해야하는지 
     return rf_pred, dt_pred, lgbm_pred, xgb_pred
 
 
@@ -88,13 +102,22 @@ def prediction(rf_clf, dt_clf, lgbm_clf, xgb_clf, x_test, col):
 
 # 5. 평가
 def evaluation_model(y_test, rf_pred, dt_pred, lgbm_pred, xgb_pred):
-    rf_confusion = confusion_matrix(y_test, rf_pred)
-    rf_accuracy = accuracy_score(y_test, rf_pred)
-    rf_precision = precision_score(y_test, rf_pred)
-    rf_recall = recall_score(y_test, rf_pred)
-    rf_f1 = f1_score(y_test, rf_pred)
-    rf_auc = roc_auc_score(y_test, rf_pred)
-
+    # 평가 지표
+    # 왜 정확도로? 정확도를 기준으로? 해당 프로젝트에선 다른 평가지표보다 단순하게 불량 유무를 체크하기 위해서기 때문에, 정확도가 가장 중요하다고 판단해서
+    # Acuuracy 를 픽했다!!!!!!!!!!!!!!!~~~~~~~~ 
+    # 늘 생각하는거지만 데이터와 코드엔 목적성이 중요하다. 
+    # 이후에 목적이 달라지면 그것에 맞는 평가지표가 필요하기 때문에 활용을 했다. 
+    # 평가지표의 구별방법은? = 프로젝트의 목적에 따라 다르고, 프로젝트 경험이 많이 없기 때문에 회사에서 많이 알려준다면 따라서 갈것입니다. 
+    rf_confusion = confusion_matrix(y_test, rf_pred) #x_test predict(예측) 한 결과값과 y_test(실제) 결과값 비교. 
+    rf_accuracy = accuracy_score(y_test, rf_pred) # 정확도
+    rf_precision = precision_score(y_test, rf_pred)  # 정밀도
+    rf_recall = recall_score(y_test, rf_pred) # 재현률
+    rf_f1 = f1_score(y_test, rf_pred) # 정밀도와 재현율을 기반으로 명확하게 성능을 평가하는 것.
+    rf_auc = roc_auc_score(y_test, rf_pred) # false positive rate가 변할 때 true positive rate가 어떻게 벼하는지를 나타내는 곡선. 
+                                            # fpr : 컴퓨터가 positive 판단했는데 실제값는 negative. 그 값이 얼만지 비율로 된것. ex) 지오가 있지만 robot으로 판단한 것.
+                                            # tpr : 컴퓨터가 positive 판단했는데 실제값도 positive. 그 값이 얼만지 비율로 된것. ex) 지오가 지오로 판단된 것. 
+    #위의 것들 숫자가 높을수록 좋은 것. ex) 1이 나오는 순간 성능이 가장 높다.
+    #분류 모델 명칭. dt, lgbm, xgb.
     dt_confusion = confusion_matrix(y_test, dt_pred)
     dt_accuracy = accuracy_score(y_test, dt_pred)
     dt_precision = precision_score(y_test, dt_pred)
@@ -119,6 +142,8 @@ def evaluation_model(y_test, rf_pred, dt_pred, lgbm_pred, xgb_pred):
 
     print('Random_Forest_Classifier: \n 오차행렬')
     print(rf_confusion)
+    # 정규식 : 데이터 표현형식. 이걸 잘하면 개발을 잘하는 것 ;ㅅ; use ai!
+    # index값(0번째 배열의 index값이지만, 어떻게 표현할지 즉, 소수점 넷째자리까지 rf_accuracy를 표현하라.) 
     print('정확도: {0:.4f}, 정밀도: {1:.4f}, 재현율: {2:.4f}, F1: {3:.4f}, AUC: {4:.4f}'.format(rf_accuracy, rf_precision, rf_recall, rf_f1, rf_auc))
     print()
     print('Decision_Tree_Classifier \n 오차행렬')
@@ -136,8 +161,9 @@ def evaluation_model(y_test, rf_pred, dt_pred, lgbm_pred, xgb_pred):
     max_rate = "%.4f"%max(dict)
     print('입력된 데이터에서 가장 정확도가 높은 분류모델은 ', dict.get(max(dict)), '이며 해당 모델의 정확도는 ',max_rate,'이다.')
 
-def relation_map(data, col) :
-    refine_data = data.drop(['Cyl5temp', 'oiltemp'], axis=1)
+# feature 와 result 의 상관관계 
+def relation_map(data, col) :  
+    refine_data = data.drop(['Cyl5temp', 'oiltemp'], axis=1) #삭제 코드 . 두 컬럼 값이 result랑 상관이 없다. 그래서, 그래프화가 안됨. 그래서 삭제.
     plt.figure(figsize=(15, 15))
     sns.heatmap(data = refine_data.corr(), annot=True, fmt='.2f', linewidths=.5, cmap='Blues')
     sns.clustermap(refine_data.corr(), annot = True, cmap= 'RdYlBu_r', vmin = -1, vmax=1)
