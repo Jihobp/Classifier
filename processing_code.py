@@ -2,15 +2,17 @@ import xgboost
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt #비쥬얼라이징
 import seaborn as sns
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import f1_score, confusion_matrix, precision_score, recall_score, accuracy_score, roc_auc_score
+from sklearn.metrics import f1_score, confusion_matrix, precision_score, recall_score, accuracy_score, roc_auc_score #정확도 확인
 from xgboost import XGBClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from lightgbm import LGBMClassifier
 
+# 정확도 기준으로 classifier 모델 추천하는 알고리즘 생성
+# 어떤 사출 조건이 제품의 불량 유무에 큰 영향을 주는지 
 
 def input_data():
     input_file_name = input()
@@ -20,23 +22,34 @@ def input_data():
 def import_data(input_file_name) :
     data = pd.read_csv(input_file_name)
     data= data.drop(columns=['Balance','RunOut'])
-    data= data.replace({'OK':0, 'NG':1})
+    data= data.replace({'OK':0, 'NG':1}) #ok:정상품 ng:불량품 // 사출 조건에 따른 제품 불량 유무를 학습하여 예측 : 사출조건=제품 생성할때의 기초조건 온도, 습도 등
     return data
 
 # 2. X,Y 데이터 규별 및 학습 데이터와 테스트 데이터 구별
-def split_data(data) :
-    x = data.iloc[:, :-1]
-    y = data.iloc[:, -1:]
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3) 
-    col = []
+
+def split_data(data) : # : 2차원 배열(행은 데이터가 있는데 기압, 온도, 습도. 마지막 열에는 result 즉 제품불량 유닛.
+    x = data.iloc[:, :-1] #x=사출조건 데이터 (끝에서 끝이전까지)
+    y = data.iloc[:, -1:] #y=제품불량 유무 (끝에것만) 0=ok, 1=ng, -1: 0에서 거꾸로 가서 끝, 즉 리스트의 제일 last data를 불러올수 있게 하는 것. 
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3)  
+    # train > test (학습>정답예측) 0.3 // 전체에서 0.3만큼의 분량을 test data로 하겠다. 10개의 데이터가 있다면 3개만큼의 test data, 나머지 0.7은 학습
+    col = [] #column 열, list 변수명
+    #컴퓨터는 바보라 데이터를 명시해줘야 한다. 
+    #행들은 데이터고, 열은 데이터를 명시 및 카테고리화 해서 학습시켜주는 것. 기압, 온도, 습도의 명시화. 
+    # col이 필요할때가 있다. fit만 시키면 카테고리가 뭔지 모른다. 열 0번이 기압, 열 1번이 온도다 해서 명시시킨것. 
     for i in range(0, len(data.columns)):
         col.append(data.columns[i])
-    return x_train, x_test, y_train, y_test, col
+    return x_train, x_test, y_train, y_test, col # 학습시킨 결과를 예측시키는것. xtrain test를 통해 사출조건 데이터를 학습시킴.
+    #test는 다 result가 있다. 
+    # train 데이터는 0.7 
+    # test 데이터는 0.3
+    # x가 변수 y 가 결과값. x가 사출조건이면 y는 제품불량 유무.
+    # fit :  학습 시키는 것. 모델에 맞춰보는 것.  = x_train & y_train 
+
 
 # 3. 분류 모델 명시 및 학습하기
 def train_model(x_train, x_test, y_train, y_test) :
     # 3-1. RandomForest_Classifier
-    rf_clf = RandomForestClassifier(random_state=0)
+    rf_clf = RandomForestClassifier(random_state=0) #random_state : 컴퓨터는 단순하다. 단순한 12345만 학습시키면 그것만 학습하고 찾음. 다양한 난수패턴을 학습시켜야한다. 
     rf_clf.fit(x_train, y_train)
     
     # 3-2. DecisionTree Classifier
